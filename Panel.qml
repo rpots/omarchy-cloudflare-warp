@@ -27,6 +27,21 @@ Panel {
   readonly property string iconStatus: warp.state === "checking" || warp.state === "connecting" ? "connecting"
     : (iconUrgent ? "urgent" : (iconConnected ? "connected" : "disconnected"))
   readonly property color barIconColor: iconStatus === "connected" || iconStatus === "connecting" ? foreground : iconDim
+  // On a transparent bar the shell picks barForeground from the wallpaper
+  // (theme text or its contrast color), so the bar icon must follow it rather
+  // than the fixed theme foreground. The badge cutout takes the opposite color.
+  readonly property color barIconForeground: root.barForeground
+  readonly property color barIconDim: Util.alpha(barIconForeground, 0.55)
+  readonly property color barIconStateColor: iconStatus === "connected" || iconStatus === "connecting" ? barIconForeground : barIconDim
+  readonly property color barIconBackground: {
+    if (!root.bar) return Color.bar.background
+    if (!root.bar.transparent) return root.bar.background
+    var fg = root.barForeground
+    var a = root.bar.foreground
+    var b = Color.background
+    function luma(c) { return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b }
+    return Math.abs(luma(a) - luma(fg)) >= Math.abs(luma(b) - luma(fg)) ? a : b
+  }
   readonly property bool termsAcceptanceRequired: warp.termsRequired
   readonly property bool registrationRequired: warp.state === "unregistered" || warp.termsRequired
 
@@ -82,11 +97,11 @@ Panel {
       CloudIcon {
         anchors.centerIn: parent
         iconSize: Style.bar.iconCanvas
-        color: root.barIconColor
-        indicatorColor: root.foreground
-        dimColor: root.iconDim
+        color: root.barIconStateColor
+        indicatorColor: root.barIconForeground
+        dimColor: root.barIconDim
         badgeColor: root.urgent
-        backgroundColor: root.bar ? root.bar.background : Color.bar.background
+        backgroundColor: root.barIconBackground
         fontFamily: root.fontFamily
         status: root.iconStatus
         pulse: root.iconPulse
